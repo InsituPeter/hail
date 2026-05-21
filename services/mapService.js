@@ -1,11 +1,11 @@
 const {Client} = require("@googlemaps/google-maps-services-js")
-
+const config = require("../config")
 const {AppError} = require("../error")
 
 class MapsService{
-    constructor(client){
+    constructor(config){
         this.client=new Client()
-        this.apiKey= config.googleMaps.apiKey
+        this.apiKey= config.googleMap.apiKeys
     }
 
     async getDistanceAndDuration(originLat, originLng, destLat, destLng){
@@ -21,7 +21,7 @@ class MapsService{
             throw new AppError("Could not calculate route", 502)
         }
         const distanceKm = element.distance.value/1000
-        const durationMin = ath.ceil(element.duration.value / 60)
+        const durationMin = Math.ceil(element.duration.value / 60)
         return { distanceKm, durationMin }
     }
 }

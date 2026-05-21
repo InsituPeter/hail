@@ -1,5 +1,6 @@
 const { PrismaClientKnownRequestError, PrismaClientValidationError } = require("@prisma/client/runtime/library")
 const { AppError, ConflictError, NotFoundError } = require("../error")
+const logger = require("../config/logger")
 
 const errorHandler = (err, req, res, next) => {
     if (err instanceof AppError) {
