@@ -296,6 +296,6 @@ it("Throws not found error if ride does not exist", async()=>{
    rideRepository.findById.mockResolvedValue(null)
     await expect(rideService.completeRide(1, 4)).rejects.toThrow(NotFoundError)
 })
-it("Throw")
+
 })
 })
