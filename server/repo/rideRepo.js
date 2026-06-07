@@ -48,7 +48,7 @@ class RideRepository{
     }
     async findByRider(riderId){
         return await prisma.ride.findMany({
-            where:{radiderId},
+            where:{riderId},
             orderBy:{createdAt:'desc'},
             include:{
                  rider: { include: { user: { select: { userId: true } } } },

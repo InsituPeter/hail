@@ -8,6 +8,7 @@ const {
     NotFoundError,
     ForbiddenError,
     AuthorizationError,
+    ConflictError,
 } = require("../../error")
 
 function makeUserRepository(overrides = {}) {
@@ -244,4 +245,122 @@ describe("AuthService.forgotPassword()", ()=>{
         )
     })
 })
-     
+const passwordToken = {
+    ...validToken,
+    type: "PASSWORD",
+}
+
+describe("AuthService.resetPassword()", () => {
+    let authService, emailService, tokenRepository, userRepository
+
+    beforeEach(() => {
+        emailService = makeEmailService()
+        tokenRepository = makeTokenRepository()
+        userRepository = makeUserRepository()
+        authService = new AuthService(userRepository, emailService, tokenRepository)
+    })
+
+    it("throws AuthorizationError when link invalid or expired", async () => {
+        tokenRepository.findByToken.mockResolvedValue(null)
+        await expect(authService.resetPassword("token", "hashed")).rejects.toThrow(AuthorizationError)
+    })
+
+    it("throws AuthorizationError when token type is invalid", async () => {
+        tokenRepository.findByToken.mockResolvedValue(validToken)
+        await expect(authService.resetPassword("token", "hashed")).rejects.toThrow(AuthorizationError)
+    })
+
+    it("throws AuthorizationError when token state is not active", async () => {
+        tokenRepository.findByToken.mockResolvedValue({ ...passwordToken, state: "USED" })
+        await expect(authService.resetPassword("rawToken", "newPassword")).rejects.toThrow(AuthorizationError)
+    })
+
+    it("updates profile, marks token used, and logs out all devices on success", async () => {
+        tokenRepository.findByToken.mockResolvedValue(passwordToken)
+        bcrypt.hash.mockResolvedValue("hashed_new_password")
+        userRepository.updateProfile.mockResolvedValue()
+        tokenRepository.markUsed.mockResolvedValue()
+        tokenRepository.findByUserId.mockResolvedValue([])
+
+        await authService.resetPassword("raw-token", "new-password")
+
+        expect(userRepository.updateProfile).toHaveBeenCalledWith(
+            passwordToken.user.userId,
+            { password: "hashed_new_password" }
+        )
+        expect(tokenRepository.markUsed).toHaveBeenCalledTimes(1)
+    })
+})
+
+describe("AuthService.logoutAllDevices()", () => {
+    let authService, tokenRepository
+
+    beforeEach(() => {
+        tokenRepository = makeTokenRepository()
+        authService = new AuthService(makeUserRepository(), makeEmailService(), tokenRepository)
+    })
+
+    it("does nothing when user has no tokens", async () => {
+        tokenRepository.findByUserId.mockResolvedValue([])
+        await authService.logoutAllDevices(1)
+        expect(tokenRepository.revokeToken).not.toHaveBeenCalled()
+    })
+
+    it("revokes all tokens for the user", async () => {
+        const tokens = [
+            { token: "hash_abc123" },
+            { token: "hash_def456" },
+        ]
+        tokenRepository.findByUserId.mockResolvedValue(tokens)
+        tokenRepository.revokeToken.mockResolvedValue()
+
+        await authService.logoutAllDevices(1)
+
+        expect(tokenRepository.revokeToken).toHaveBeenCalledTimes(2)
+        expect(tokenRepository.revokeToken).toHaveBeenCalledWith("hash_abc123")
+        expect(tokenRepository.revokeToken).toHaveBeenCalledWith("hash_def456")
+    })
+})
+
+describe("AuthService.sendVerificationEmail()", () => {
+    let authService, userRepository, tokenRepository, emailService
+
+    beforeEach(() => {
+        userRepository = makeUserRepository()
+        tokenRepository = makeTokenRepository()
+        emailService = makeEmailService()
+        authService = new AuthService(userRepository, emailService, tokenRepository)
+    })
+
+    it("throws NotFoundError when user does not exist", async () => {
+        userRepository.findById.mockResolvedValue(null)
+        await expect(authService.sendVerificationEmail(99)).rejects.toThrow(NotFoundError)
+    })
+
+    it("throws ConflictError when email is already verified", async () => {
+        userRepository.findById.mockResolvedValue(activeUser)
+        await expect(authService.sendVerificationEmail(1)).rejects.toThrow(ConflictError)
+    })
+
+    it("creates email token and sends verification email on success", async () => {
+        userRepository.findById.mockResolvedValue({ ...activeUser, emailVerifiedAt: null })
+        tokenRepository.create.mockResolvedValue()
+        emailService.sendVerificationEmail.mockResolvedValue()
+
+        await authService.sendVerificationEmail(1)
+
+        expect(tokenRepository.create).toHaveBeenCalledWith(
+            1,
+            expect.any(Date),
+            expect.any(String),
+            "EMAIL",
+            null,
+            null
+        )
+        expect(emailService.sendVerificationEmail).toHaveBeenCalledWith(
+            activeUser.email,
+            activeUser.name,
+            expect.any(String)
+        )
+    })
+})

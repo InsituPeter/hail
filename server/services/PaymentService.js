@@ -44,7 +44,7 @@ class PaymentService {
             return await this._initiateCashPayment(ride)
         }
         return await this._initiatePaystackPayment(ride, rider)
-    }
+    }    
 
     constructWebhookEvent(rawBody, signature) {
         const hash = crypto

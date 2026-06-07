@@ -64,7 +64,7 @@ function makepaystackGateway(overrides={}){
     it("return driver", async()=>{
          driverRepository.findByUserId.mockResolvedValue(null)
          driverRepository.create.mockResolvedValue(driver)
-         paystackGateway.createSubaccount.mockResolvedValue({subAccountCode:"SUB_123"})
+         paystackGateway.createSubaccount.mockResolvedValue({subaccountCode:"SUB_123"})
         const result= await driverService.createDriver(1, driver)
         expect(result).toHaveProperty("userId")
         expect(result).toHaveProperty("licenseNumber")

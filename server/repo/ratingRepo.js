@@ -13,7 +13,7 @@ class Rating{
     }
     async findByRideAndRater(rideId, raterId){
         return await prisma.rating.findUnique({
-            where:{ride}
+            where:{rideId}
         })
     }
 }
