@@ -7,7 +7,7 @@ const jwt = require("jsonwebtoken")
 
 jest.setTimeout(900000)
 
-registerAndLogin= async(email)=>{
+const registerAndLogin = async(email)=>{
   const reg=  await request(app)
     .post('/api/v1/auth/register')
     .send({email, password:"Pass1234", name:"Driver", role:"DRIVER"})
@@ -30,7 +30,7 @@ registerAndLogin= async(email)=>{
     return login.body.data.accessToken
 }
 
-registerAndCreate= async (email, suffix)=>{
+const registerAndCreate = async (email, suffix)=>{
     const token = await registerAndLogin(email)
     const data = {
         licenseNumber: `LIC_${suffix}`,
@@ -50,7 +50,7 @@ registerAndCreate= async (email, suffix)=>{
     return { profile: driver.body, token }
 }
 
-registerAndLoginRider= async(email)=>{
+const registerAndLoginRider = async(email)=>{
    const res= await request(app)
    .post('/api/v1/auth/register')
    .send({email, password:"Pass12345", name:"Rider", role:"RIDER"})

@@ -1,6 +1,7 @@
 const js = require("@eslint/js")
 
 module.exports = [
+    { ignores: ["loadtest/**", "_check.js", "_test_conn.js"] },
     js.configs.recommended,
     {
         languageOptions: {

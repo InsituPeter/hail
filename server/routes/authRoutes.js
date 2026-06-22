@@ -19,13 +19,13 @@ const { registerSchema, loginSchema, forgotPasswordSchema, resetPasswordSchema }
 
 
 module.exports =(authController)=>{
-    router.post('/register',  validate(registerSchema), authController.register)
-    router.post("/login", validate(loginSchema), authController.login)
+    router.post('/register', authLimiter, validate(registerSchema), authController.register)
+    router.post("/login", authLimiter, validate(loginSchema), authController.login)
     router.post("/refresh", authController.refresh)
     router.post("/logout", authController.logout)
     router.get('/verify-email', authController.verifyEmail)
-    router.post("/forgot-password", validate(forgotPasswordSchema), authController.forgotPassword)
-    router.post("/reset-password", validate(resetPasswordSchema), authController.resetPassword)
+    router.post("/forgot-password", passwordResetLimiter, validate(forgotPasswordSchema), authController.forgotPassword)
+    router.post("/reset-password", passwordResetLimiter, validate(resetPasswordSchema), authController.resetPassword)
 
     return router
 }
