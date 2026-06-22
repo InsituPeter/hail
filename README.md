@@ -246,23 +246,6 @@ REQUESTED → ACCEPTED → IN_PROGRESS → COMPLETED
 | `docker compose up -d` | Start PostgreSQL + Redis |
 | `docker compose down -v` | Stop + remove volumes |
 
-## Design System
-
-Brand: Hail, Lagos, Nigerian Naira (₦). Font: Plus Jakarta Sans (400/600).
-
-- Design tokens: `client/design/tokens.css`
-- UI components: Button, Input, Badge, RideStatusCard, BottomSheet, RideTypeCard
-- All components use CSS custom properties — no hardcoded values
-- 4px spacing scale, WCAG AA contrast compliant
-
-## Roadmap
-
-- [ ] Driver proximity-based matching
-- [ ] Ratings and reviews
-- [ ] Ride history
-- [ ] Push notifications
-- [ ] Dynamic fare calculation
-
 ## License
 
 ISC
