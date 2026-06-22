@@ -15,13 +15,11 @@ class UserService{
   
     async createUser(data){
       const {email, password, name, role, phone} = data
-      if(!email || !password || !name || !role){
-        throw new ValidationError('All fields are required')
-      }
+      
       const exists= await this.userRepository.existByEmail(email)
       if(exists) throw new ConflictError('User')
       const hashed= await bcrypt.hash(password,10)
-      const user=await this.userRepository.create(email, hashed, name, role, phone)
+      const user=await this.userRepository.create({...data, password: hashed})
      if(role ==="RIDER"){
         await this.riderRepository.create(user.userId)
      }

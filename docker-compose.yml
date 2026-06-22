@@ -1,12 +1,12 @@
 services:
   api:
-    build: .
+    build: ./server
     container_name: hail
     restart: always
     ports:
       - "8810:8810"
     env_file:
-      - .env
+      - ./server/.env
     environment:
       - NODE_ENV=development
     depends_on:
@@ -15,7 +15,7 @@ services:
       postgres:
         condition: service_healthy
     volumes:
-      - .:/src
+      - ./server:/src
     command: ["npx", "nodemon", "app.js"]
 
   postgres:

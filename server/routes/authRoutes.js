@@ -5,7 +5,7 @@ const validate= require("../middleware/validate")
 const {authLimiter, passwordResetLimiter} = require("../middleware/rateLimiter")
 const { registerSchema, loginSchema, forgotPasswordSchema, resetPasswordSchema } = require('../validation/authSchema')
 
-module.exports =(authController)=>{
+/*module.exports =(authController)=>{
     router.post('/register', authLimiter, validate(registerSchema), authController.register)
     router.post("/login", authLimiter, validate(loginSchema), authController.login)
     router.post("/refresh", authController.refresh)
@@ -13,6 +13,19 @@ module.exports =(authController)=>{
     router.get('/verify-email', authController.verifyEmail)
     router.post("/forgot-password", passwordResetLimiter, validate(forgotPasswordSchema), authController.forgotPassword)
     router.post("/reset-password", passwordResetLimiter, validate(resetPasswordSchema), authController.resetPassword)
+
+    return router
+}*/
+
+
+module.exports =(authController)=>{
+    router.post('/register',  validate(registerSchema), authController.register)
+    router.post("/login", validate(loginSchema), authController.login)
+    router.post("/refresh", authController.refresh)
+    router.post("/logout", authController.logout)
+    router.get('/verify-email', authController.verifyEmail)
+    router.post("/forgot-password", validate(forgotPasswordSchema), authController.forgotPassword)
+    router.post("/reset-password", validate(resetPasswordSchema), authController.resetPassword)
 
     return router
 }

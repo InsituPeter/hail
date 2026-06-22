@@ -6,7 +6,7 @@ const authorize = require("../middleware/authorize")
 
 module.exports = (authService, adminController) => {
     const auth = authenticate(authService)
-    const adminOnly = authorize(["ADMIN"])
+    const adminOnly = authorize("ADMIN")
 
     // Rides
     router.get("/rides", auth, adminOnly, adminController.getAllRides)

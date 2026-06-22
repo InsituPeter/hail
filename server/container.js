@@ -24,7 +24,9 @@ const PaymentService = require("./services/PaymentService")
 const DriverService= require("./services/driverService")
 const RiderService= require("./services/riderService")
 const RideService = require("./services/rideService")
-const MapsService= require("./services/mapService")
+const MapsService = config.env === 'development' || config.env === 'test'
+    ? require("./services/mockMapService")
+    : require("./services/mapService")
 const EventPublisher = require("./services/eventPublisher")
 const AdminService = require("./services/adminService")
 
@@ -54,7 +56,7 @@ const templateDomain = new TemplateDomain(config.frontend.url, config.company.na
 // Instantiate services
 const emailService = new EmailService(transporter, templateDomain, config.frontend.url)
 const authService = new AuthService(userRepository, emailService, tokenRepository)
-const userService = new UserService(userRepository)
+const userService = new UserService(userRepository, riderRepository)
 const mapsService = new MapsService(config)
 const eventPublisher = new EventPublisher(redis)
 const paymentService = new PaymentService(paystackGateway, paymentRepository, rideRepository, riderRepository, driverRepository, config, eventPublisher)

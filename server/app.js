@@ -22,7 +22,7 @@ const rideRoutes = require("./routes/rideRoutes")(authService, rideController)
 const adminRoutes = require("./routes/adminRoutes")(authService, adminController)
 app.use(helmet())
 app.use(httpLogger)
-app.use("/", webhookRoutes)
+app.use("/webhook", webhookRoutes)
 
 app.use(express.json())
 app.use(cookieParser())
@@ -47,6 +47,8 @@ const start = async () => {
     try {
         await prisma.$connect()
         await redis.ping()
+        const { count } = await authService.cleanupStaleTokens()
+        if (count > 0) logger.info(`Cleaned up ${count} stale tokens`)
         server.listen(config.port, () => {
             logger.info(`server is listening on port ${config.port}`)
         })
@@ -58,3 +60,5 @@ const start = async () => {
 }
 
 start()
+
+module.exports = app

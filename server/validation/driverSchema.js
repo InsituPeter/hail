@@ -2,7 +2,7 @@ const {z} =require("zod")
 
 const createSchema= z.object({
     licenseNumber:z.string().min(1),
-    vehicleType:z.string(["ECONOMY", "COMFORT", "XL"]),
+    vehicleType:z.enum(["ECONOMY", "COMFORT", "XL"]),
     vehicleMake:z.string().min(1),
     vehicleModel:z.string().min(1),
     vehiclePlate: z.string().min(1),
