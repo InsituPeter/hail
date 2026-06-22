@@ -153,6 +153,10 @@ class AuthService{
         await this.tokenRepository.markUsed(hashedToken)
         await this.logoutAllDevices(stored.user.userId)
     }
+
+    async cleanupStaleTokens(){
+        await this.tokenRepository.deleteStale()
+    }
 }
 
 

@@ -6,7 +6,7 @@ const authorize = require("../middleware/authorize")
 
 module.exports = (authService, riderController) => {
     const auth = authenticate(authService)
-    const riderOnly = authorize(["RIDER"])
+    const riderOnly = authorize("RIDER")
 
     router.post("/", auth, riderOnly, riderController.createRiderProfile)
     router.get("/profile", auth, riderOnly, riderController.getProfile)

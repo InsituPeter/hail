@@ -80,6 +80,7 @@ class PaymentService {
     }
 
     async confirmCashPayment(rideId, userId) {
+        rideId = Number(rideId)
         const ride = await this.rideRepository.findById(rideId)
         if (!ride) throw new NotFoundError("Ride")
         if (ride.state !== "COMPLETED") throw new ConflictError("Ride is not completed")

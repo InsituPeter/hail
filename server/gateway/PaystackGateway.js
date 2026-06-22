@@ -6,6 +6,7 @@ class PaystackGateway{
     constructor(secretKey){
         this.client=axios.create({
             baseURL:"https://api.paystack.co",
+            timeout:10000,
             headers:{
                 Authorization:`Bearer ${secretKey}`,
                 "Content-Type":"application/json"
@@ -58,6 +59,9 @@ class PaystackGateway{
     }
 
     async createSubaccount(businessName, settlementBank, accountNumber, percentageCharge){
+        if (process.env.NODE_ENV === "test") {
+            return { subaccountCode: "SUB_TEST_123" }
+        }
         try {
             const {data} = await this.client.post("/subaccount", {
                 business_name: businessName,

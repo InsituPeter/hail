@@ -5,6 +5,7 @@ const{
     ConflictError,
     ForbiddenError,
     NotFoundError,
+    PaystackPermanentError,
 
 }= require("../../error")
 
@@ -75,6 +76,47 @@ function makepaystackGateway(overrides={}){
         )
        
 
+    })
+
+    it("deletes driver record and re-throws on PaystackPermanentError", async () => {
+        const permError = new PaystackPermanentError("Subaccount creation failed")
+        driverRepository.findByUserId.mockResolvedValue(null)
+        driverRepository.create.mockResolvedValue(driver)
+        driverRepository.deleteById = jest.fn().mockResolvedValue()
+        paystackGateway.createSubaccount.mockRejectedValue(permError)
+
+        await expect(driverService.createDriver(1, driver)).rejects.toThrow(PaystackPermanentError)
+        expect(driverRepository.deleteById).toHaveBeenCalledWith(driver.driverProfileId)
+    })
+
+    it("retries updateProfile up to 3 times on transient failure", async () => {
+        driverRepository.findByUserId.mockResolvedValue(null)
+        driverRepository.create.mockResolvedValue(driver)
+        paystackGateway.createSubaccount.mockResolvedValue({subaccountCode:"SUB_123"})
+        const err = new Error("DB timeout")
+        driverRepository.updateProfile
+            .mockRejectedValueOnce(err)
+            .mockRejectedValueOnce(err)
+            .mockResolvedValue({ ...driver, paystackSubaccountCode: "SUB_123" })
+
+        const result = await driverService.createDriver(1, driver)
+
+        expect(driverRepository.updateProfile).toHaveBeenCalledTimes(3)
+        expect(result).toHaveProperty("licenseNumber")
+    })
+
+    it("throws after 3 failed updateProfile attempts", async () => {
+        driverRepository.findByUserId.mockResolvedValue(null)
+        driverRepository.create.mockResolvedValue(driver)
+        paystackGateway.createSubaccount.mockResolvedValue({subaccountCode:"SUB_123"})
+        const err = new Error("DB timeout")
+        driverRepository.updateProfile
+            .mockRejectedValueOnce(err)
+            .mockRejectedValueOnce(err)
+            .mockRejectedValueOnce(err)
+
+        await expect(driverService.createDriver(1, driver)).rejects.toThrow("DB timeout")
+        expect(driverRepository.updateProfile).toHaveBeenCalledTimes(3)
     })
     })
 

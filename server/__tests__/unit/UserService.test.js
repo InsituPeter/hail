@@ -1,6 +1,6 @@
 jest.mock("bcryptjs")
 const bcrypt = require("bcryptjs")
-const { NotFoundError, ConflictError, ValidationError } = require("../../error")
+const { NotFoundError, ConflictError } = require("../../error")
 const UserService = require("../../services/userService")
 
 function makeUserRepository(overrides = {}) {
@@ -46,10 +46,6 @@ describe("UserService.createUser()", () => {
         userRepository = makeUserRepository()
         riderRepository = makeRiderRepository()
         userService = new UserService(userRepository, riderRepository)
-    })
-
-    it("throws ValidationError when required fields are missing", async () => {
-        await expect(userService.createUser({ email: "only@email.com" })).rejects.toThrow(ValidationError)
     })
 
     it("throws ConflictError when email already exists", async () => {

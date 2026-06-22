@@ -2,7 +2,7 @@ const prisma= require("../config/prisma")
 
 class UserRepository{
     
-    async create(email, password, name, phone, role){
+    async create({email, password, name, phone, role}){
       return await prisma.user.create({
         data:{email:email.toLowerCase(), password, name, role, phone}
       })
@@ -92,7 +92,7 @@ class UserRepository{
 
   async suspendUser(userId){
     return await prisma.user.update({
-        where:{userId},
+        where:{userId: parseInt(userId)},
         data:{suspendedAt:new Date()},
         
     })

@@ -93,6 +93,14 @@ describe("AuthService.login()", () => {
         ).rejects.toThrow(ForbiddenError)
     })
 
+    it("throws ForbiddenError when account is suspended", async () => {
+        userRepository.findByEmail.mockResolvedValue({ ...activeUser, suspendedAt: new Date() })
+        bcrypt.compare.mockResolvedValue(true)
+        await expect(
+            authService.login("rider@test.com", "pass", "127.0.0.1", "agent")
+        ).rejects.toThrow(ForbiddenError)
+    })
+
     it("throws ForbiddenError when email has not been verified", async () => {
         userRepository.findByEmail.mockResolvedValue({ ...activeUser, emailVerifiedAt: null })
         bcrypt.compare.mockResolvedValue(true)
@@ -209,6 +217,68 @@ describe("AuthService.logout()", () => {
         expect(tokenRepository.revokeToken).toHaveBeenCalledTimes(1)
     })
 })
+describe("AuthService.refreshAccessToken()", () => {
+    let authService, userRepository, tokenRepository, emailService
+
+    beforeEach(() => {
+        userRepository = makeUserRepository()
+        tokenRepository = makeTokenRepository()
+        emailService = makeEmailService()
+        authService = new AuthService(userRepository, emailService, tokenRepository)
+    })
+
+    it("throws AuthorizationError when token not in DB", async () => {
+        tokenRepository.findByToken.mockResolvedValue(null)
+        await expect(
+            authService.refreshAccessToken("raw-token", "127.0.0.1", "agent")
+        ).rejects.toThrow(AuthorizationError)
+    })
+
+    it("throws AuthorizationError when token type is not REFRESH", async () => {
+        tokenRepository.findByToken.mockResolvedValue({ ...refreshToken, type: "EMAIL" })
+        await expect(
+            authService.refreshAccessToken("raw-token", "127.0.0.1", "agent")
+        ).rejects.toThrow(AuthorizationError)
+    })
+
+    it("throws AuthorizationError when token state is not ACTIVE", async () => {
+        tokenRepository.findByToken.mockResolvedValue({ ...refreshToken, state: "USED" })
+        await expect(
+            authService.refreshAccessToken("raw-token", "127.0.0.1", "agent")
+        ).rejects.toThrow(AuthorizationError)
+    })
+
+    it("throws AuthorizationError when token has expired", async () => {
+        tokenRepository.findByToken.mockResolvedValue({
+            ...refreshToken,
+            expiresAt: new Date(Date.now() - 1000),
+        })
+        await expect(
+            authService.refreshAccessToken("raw-token", "127.0.0.1", "agent")
+        ).rejects.toThrow(AuthorizationError)
+    })
+
+    it("revokes old token and returns new tokens on success", async () => {
+        tokenRepository.findByToken.mockResolvedValue(refreshToken)
+        tokenRepository.revokeToken.mockResolvedValue()
+        tokenRepository.create.mockResolvedValue()
+
+        const result = await authService.refreshAccessToken("raw-token", "127.0.0.1", "agent")
+
+        expect(tokenRepository.revokeToken).toHaveBeenCalledTimes(1)
+        expect(tokenRepository.create).toHaveBeenCalledWith(
+            refreshToken.user.userId,
+            expect.any(Date),
+            expect.any(String),
+            "REFRESH",
+            "127.0.0.1",
+            "agent"
+        )
+        expect(result).toHaveProperty("accessToken")
+        expect(result).toHaveProperty("refreshToken")
+    })
+})
+
 describe("AuthService.forgotPassword()", ()=>{
    let authService, emailService, tokenRepository, userRepository
    beforeEach(()=>{
@@ -245,6 +315,15 @@ describe("AuthService.forgotPassword()", ()=>{
         )
     })
 })
+const refreshToken = {
+    tokenId: 11,
+    userId: 1,
+    type: "REFRESH",
+    state: "ACTIVE",
+    expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+    user: { userId: 1, email: "rider@test.com", role: "RIDER" },
+}
+
 const passwordToken = {
     ...validToken,
     type: "PASSWORD",
@@ -362,5 +441,20 @@ describe("AuthService.sendVerificationEmail()", () => {
             activeUser.name,
             expect.any(String)
         )
+    })
+})
+
+describe("AuthService.cleanupStaleTokens()", () => {
+    let authService, tokenRepository
+
+    beforeEach(() => {
+        tokenRepository = makeTokenRepository()
+        authService = new AuthService(makeUserRepository(), makeEmailService(), tokenRepository)
+    })
+
+    it("delegates to tokenRepository.deleteStale", async () => {
+        tokenRepository.deleteStale = jest.fn().mockResolvedValue(5)
+        const result = await authService.cleanupStaleTokens()
+        expect(tokenRepository.deleteStale).toHaveBeenCalledTimes(1)
     })
 })

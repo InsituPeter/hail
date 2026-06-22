@@ -56,6 +56,7 @@ class RideService {
     }
 
     async acceptRide(rideId, userId) {
+        rideId = Number(rideId)
         const ride = await this.rideRepository.findById(rideId)
         if (!ride) throw new NotFoundError("Ride")
         if (ride.state !== "REQUESTED") throw new ConflictError("Ride is no longer available")
@@ -74,6 +75,7 @@ class RideService {
     }
 
     async startRide(rideId, userId) {
+        rideId = Number(rideId)
         const ride = await this.rideRepository.findById(rideId)
         if (!ride) throw new NotFoundError("Ride")
         if (ride.state !== "ACCEPTED") throw new ConflictError("Ride cannot be started")
@@ -90,6 +92,7 @@ class RideService {
     }
 
     async cancelRide(rideId, userId, role, reason) {
+        rideId = Number(rideId)
         const ride = await this.rideRepository.findById(rideId)
         if (!ride) throw new NotFoundError("Ride")
         if (!["REQUESTED", "ACCEPTED"].includes(ride.state)) throw new ConflictError("Ride cannot be cancelled")
@@ -115,6 +118,7 @@ class RideService {
     }
 
     async completeRide(rideId, userId) {
+        rideId = Number(rideId)
         const ride = await this.rideRepository.findById(rideId)
         if (!ride) throw new NotFoundError("Ride")
         if (ride.state !== "IN_PROGRESS") throw new ConflictError("Ride is not in progress")

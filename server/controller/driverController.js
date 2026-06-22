@@ -13,7 +13,7 @@ class DriverController{
     }
     getDriver=async(req, res)=>{
         const {id:driverId}=req.params
-       const driver= await this.driverService.findDriver(driverId)
+       const driver= await this.driverService.findDriver(Number(driverId))
         res.status(200).json(driver)
     }
 
