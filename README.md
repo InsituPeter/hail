@@ -2,18 +2,22 @@
 
 ![Node](https://img.shields.io/badge/node-20%2B-339933?logo=nodedotjs)
 ![Express](https://img.shields.io/badge/express-5-000?logo=express)
-![React](https://img.shields.io/badge/react-19-61DAFB?logo=react)
+![Tests](https://img.shields.io/badge/tests-141%20passing-22BB33)
+![k6](https://img.shields.io/badge/k6-smoke%20passing-7D1A8F)
 ![License](https://img.shields.io/badge/license-ISC-8899aa)
 
-A ride-hailing platform backend and React PWA frontend — connecting riders and drivers across Lagos, Nigeria.
+A ride-hailing API backend with WebSocket real-time events, Paystack payment integration, and k6 load testing. Designed for Lagos, Nigeria. Frontend PWA under development.
 
 ## Features
 
-- Request rides with real-time driver tracking
-- Pay via card, cash, USSD, or transfer (Paystack)
-- Role-based dashboards for riders, drivers, and admins
-- WebSocket-powered live location and ride events
-- JWT authentication with silent refresh token rotation
+- REST API for full ride lifecycle (request → accept → start → complete → pay)
+- Real-time WebSocket event system (driver location, ride state changes, payment status)
+- Paystack payment orchestration (card, USSD, transfer, cash)
+- JWT authentication with httpOnly refresh token rotation and email verification
+- Role-based authorization (rider, driver, admin) with granular endpoint access
+- Rate-limited auth endpoints, HMAC-signed webhooks, Zod input validation
+- Prisma ORM with PostgreSQL — full migration history, strong consistency for payments
+- k6 load testing suite — smoke, load, stress, and soak scenarios
 
 ## Tech Stack
 
@@ -25,15 +29,17 @@ A ride-hailing platform backend and React PWA frontend — connecting riders and
 | Database | PostgreSQL |
 | ORM | Prisma |
 | Cache / Pub/Sub | Redis (ioredis) |
-| Auth | JWT (access + refresh tokens) |
+| Auth | JWT (access + refresh tokens, httpOnly cookies) |
 | Validation | Zod |
 | Payments | Paystack |
 | Maps | Google Maps API |
 | Logging | Pino |
 | Real-time | Socket.IO |
-| Testing | Jest, Supertest, Testcontainers |
+| Load testing | k6 |
+| Unit tests | Jest |
+| Integration tests | Jest + Testcontainers + Supertest |
 
-### Frontend (`client/`)
+### Frontend (`client/`) — *planned*
 
 | Layer | Technology |
 |---|---|
@@ -47,7 +53,8 @@ A ride-hailing platform backend and React PWA frontend — connecting riders and
 ### Infrastructure
 
 - Docker Compose (PostgreSQL + Redis + API server)
-- Dockerized deployment (ECS-ready)
+- Dockerized deployment (ECS-ready via GitHub Actions)
+- CI: lint + unit tests on push; CD: build → ECR → ECS deploy
 
 ## Getting Started
 
@@ -59,13 +66,8 @@ A ride-hailing platform backend and React PWA frontend — connecting riders and
 ### 1. Clone and install
 
 ```bash
-git clone <repo-url> && cd hail
-
-# Install server dependencies
-cd server && npm install
-
-# Install client dependencies
-cd ../client && npm install
+git clone <repo-url> && cd hail/server
+npm install
 ```
 
 ### 2. Start infrastructure
@@ -79,15 +81,19 @@ This starts PostgreSQL (port 5432) and Redis (port 6379).
 
 ### 3. Configure environment
 
-Copy `server/.env.example` to `server/.env` and fill in:
+Create `server/.env` with the following:
 
-```
+```env
 DATABASE_URL=postgresql://postgres:postgres@localhost:5432/hb
 REDIS_URL=redis://localhost:6379
+NODE_ENV=development
 JWT_SECRET=<your-secret>
 JWT_REFRESH_SECRET=<your-refresh-secret>
 PAYSTACK_SECRET_KEY=<paystack-secret>
 PAYSTACK_PUBLIC_KEY=<paystack-public>
+FRONTEND_URL=http://localhost:5173
+COMPANY_NAME=Hail
+SUPPORT_EMAIL=support@hail.com
 GOOGLE_MAPS_API_KEY=<google-maps-key>
 ```
 
@@ -104,52 +110,61 @@ docker exec -it hail npx prisma migrate dev
 npm run dev          # hot reload via nodemon
 ```
 
-### 6. Start the client
+### 6. Seed test data (optional)
 
 ```bash
-# From client/
-npm run dev          # Vite dev server on port 5173
+docker exec -it hail node loadtest/seed.js
+```
+
+### 7. Run load tests (optional)
+
+```bash
+k6 run server/loadtest/scrripts/smoke.js
 ```
 
 ## Project Structure
 
 ```
 hail/
-├── server/                Express backend
-│   ├── __tests__/         Jest unit tests
-│   ├── config/            Environment config
-│   ├── controllers/       Route handlers
-│   ├── error/             Custom error classes
-│   ├── gateway/           External API wrappers (Paystack, Google Maps)
-│   ├── middleware/        Auth, validation, rate limiting
-│   ├── prisma/            Schema and migrations
-│   ├── repositories/      Prisma wrappers
-│   ├── routes/            Express router factories
-│   ├── services/          Business logic
-│   ├── validation/        Zod schemas
-│   └── app.js             Entry point
-├── client/                React PWA frontend
-│   ├── design/            Design system tokens + reference
-│   ├── public/            Static assets
-│   └── src/
-│       ├── components/    UI components (Button, Input, Badge, etc.)
-│       ├── pages/         Route-level page components
-│       ├── services/      Axios + Socket.IO clients
-│       ├── store/         Zustand stores
-│       └── App.jsx        Router entry point
-├── docker-compose.yml     PostgreSQL + Redis + API
-└── SYSTEM_DESIGN.md       Architecture documentation
+├── server/                  Express backend
+│   ├── __tests__/           Unit and integration tests
+│   ├── config/              Environment config, Prisma, Redis, logger
+│   ├── controller/          Route handlers
+│   ├── Domain/              Email templates
+│   ├── error/               AppError hierarchy (8 custom error types)
+│   ├── gateway/             External API wrappers (Paystack, Google Maps)
+│   ├── loadtest/            k6 load testing suite
+│   │   ├── scrripts/        Smoke, load, stress, soak test scripts
+│   │   ├── config.js        Shared k6 constants and thresholds
+│   │   ├── helpers.js       k6 auth and utility functions
+│   │   └── seed.js          Node.js seed script (21 test users)
+│   ├── middleware/           Auth, authorization, validation, rate limiting, error handling
+│   ├── prisma/              Schema and 7 migrations
+│   ├── repo/                Prisma repository wrappers (thin data access layer)
+│   ├── routes/              Express router factories
+│   ├── services/            Business logic (auth, rides, payments, drivers, etc.)
+│   ├── socket/              Socket.IO event handlers
+│   ├── validation/          Zod schemas
+│   ├── NFR.md               Non-functional requirements documentation
+│   └── app.js               Entry point
+├── client/                  React PWA frontend (scaffold only, in development)
+│   └── design/              Design system tokens and reference
+├── .github/workflows/       CI (lint + test) and CD (ECR + ECS deploy)
+├── docker-compose.yml       PostgreSQL + Redis + API
+└── README.md                This file
 ```
 
 ## Architecture
 
-Request flow: **Route → Controller → Service → Repository → Prisma**
+**Request flow:** Route (middleware) → Controller → Service → Repository → Prisma
 
-Dependency injection via `container.js` — instantiate repos → services → controllers. Routes are factory functions receiving their controller.
+**Dependency injection:** Manual DI via `container.js` — repositories are instantiated first, injected into services, which are injected into controllers. Routes are factory functions receiving their controller. Adding a new feature follows a predictable path across these layers.
 
-Real-time: driver location updates → Redis pub/sub → Socket.IO → WebSocket clients.
+**Real-time events:** Driver location updates → Redis pub/sub → Socket.IO → WebSocket clients. Ride state changes emit events to room-scoped channels.
 
-Payment webhook: Paystack → `/webhook/paystack` → PaymentService → Postgres + Redis.
+**Payment flow:** Paystack webhook → `/webhook/paystack` → HMAC signature verification → `PaymentService.handlePaymentSuccess()` → Postgres + Redis event.
+
+**Saga pattern:** `completeRide` initiates payment before marking the ride COMPLETED. If payment fails (Paystack outage, network error), the ride stays IN_PROGRESS and the driver retries — preventing inconsistent ride/payment states.
 
 ## API Overview
 
@@ -228,23 +243,28 @@ REQUESTED → ACCEPTED → IN_PROGRESS → COMPLETED
 |---|---|
 | `npm run dev` | Dev server with nodemon |
 | `npm start` | Production start |
-| `npm test` | Run Jest tests |
-| `npm run lint` | ESLint |
+| `npm test` | Run Jest unit tests |
 | `npm run test:integration` | Integration tests with Testcontainers |
+| `npm run lint` | ESLint |
 
-### Frontend (`client/`)
+### Load testing (requires k6 CLI)
 | Command | Description |
 |---|---|
-| `npm run dev` | Vite dev server |
-| `npm run build` | Production build |
-| `npm run preview` | Preview build |
-| `npm run lint` | ESLint |
+| `k6 run loadtest/scrripts/smoke.js` | Smoke test (1 VU, 30s, validates all endpoints) |
+| `k6 run loadtest/scrripts/load-auth.js` | Ramping arrival rate on register + login |
+| `k6 run loadtest/scrripts/stress.js` | Ramping VUs to find breaking point |
+
+### Seed data
+| Command | Description |
+|---|---|
+| `docker exec hail node loadtest/seed.js` | Create 1 admin + 10 riders + 10 drivers (idempotent) |
 
 ### Infrastructure (root)
 | Command | Description |
 |---|---|
 | `docker compose up -d` | Start PostgreSQL + Redis |
 | `docker compose down -v` | Stop + remove volumes |
+| `docker exec -it hail npx prisma migrate dev` | Run pending migrations |
 
 ## License
 
