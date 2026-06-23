@@ -202,8 +202,6 @@ Base URL: `http://localhost:8810/api/v1`
 | DELETE | `/admin/users/:id` | ADMIN | Delete user |
 | GET | `/admin/payments` | ADMIN | List/filter payments |
 
-Full request/response schemas in [`AGENTS.md`](AGENTS.md).
-
 ## WebSocket Events
 
 | Event | Direction | Description |
