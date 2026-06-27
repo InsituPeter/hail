@@ -323,15 +323,14 @@ it("Throws forbidden error if wrong driver", async()=>{
     await expect(rideService.completeRide(1, 4)).rejects.toThrow(ForbiddenError)
 
 })
-it("throws when payment initiation fails and ride is already marked completed", async()=>{
+it("throws when payment initiation fails and ride stays in progress", async()=>{
     rideRepository.findById.mockResolvedValue({...ride, state:"IN_PROGRESS", driverProfileId:2, estimatedFare:1500})
     driverRepository.findByUserId.mockResolvedValue(driver)
     riderRepository.findByRiderId.mockResolvedValue(rider)
-    rideRepository.updateState.mockResolvedValue({...ride, state:"COMPLETED", finalFare:1500, completedAt: new Date("2024-11-26")})
     paymentService.initiatePayment.mockRejectedValue(new Error("Paystack unavailable"))
 
     await expect(rideService.completeRide(ride.rideId, 4)).rejects.toThrow("Paystack unavailable")
-    expect(rideRepository.updateState).toHaveBeenCalled()
+    expect(rideRepository.updateState).not.toHaveBeenCalled()
     expect(paymentService.initiatePayment).toHaveBeenCalled()
 })
 

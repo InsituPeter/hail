@@ -1,5 +1,4 @@
 const { NotFoundError, ConflictError, ForbiddenError } = require("../error")
-const logger = require("../config/logger")
 
 class RideService {
     constructor(rideRepository, driverRepository, riderRepository, paymentService, mapService, eventPublisher) {
@@ -128,19 +127,16 @@ class RideService {
         if (ride.driverProfileId !== driverProfile.driverProfileId) throw new ForbiddenError("Not authorized to complete this ride")
 
         const finalFare = ride.estimatedFare
+        ride.finalFare = finalFare
+
+        const rider = await this.riderRepository.findByRiderId(ride.riderId)
+        await this.paymentService.initiatePayment(ride, rider)
 
         const completedRide = await this.rideRepository.updateState(rideId, "COMPLETED", {
             completedAt: new Date(),
             finalFare
         })
 
-        const rider = await this.riderRepository.findByRiderId(ride.riderId)
-        try {
-            await this.paymentService.initiatePayment(completedRide, rider)
-        } catch(error) {
-            logger.error({ rideId, riderId: ride.riderId, finalFare, error }, "Payment initiation failed after ride completion")
-            throw error
-        }
         await this.eventPublisher.publishRideEvent(rideId, "ride:completed", { rideId, finalFare })
 
         return completedRide
