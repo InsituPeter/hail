@@ -66,7 +66,7 @@ A ride-hailing API backend with WebSocket real-time events, Paystack payment int
 ### 1. Clone and install
 
 ```bash
-git clone <repo-url> && cd hail/server
+git clone https://github.com/InsituPeter/hail.git && cd hail/server
 npm install
 ```
 
